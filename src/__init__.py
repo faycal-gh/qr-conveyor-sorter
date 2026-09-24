@@ -1,0 +1,1 @@
+"""QR conveyor sorter package."""

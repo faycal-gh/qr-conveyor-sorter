@@ -1,0 +1,6 @@
+# Install Picamera2 with apt on Raspberry Pi OS:
+# sudo apt install -y python3-picamera2 python3-opencv python3-gpiozero
+#
+# This file contains only optional pip packages used by this repository.
+qrcode[pil]>=8,<9
+pytest>=8,<9
