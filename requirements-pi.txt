@@ -1,4 +1,5 @@
-# Motor application uses the standard library in simulation.
-# Hardware: sudo apt install python3-gpiozero python3-lgpio
+# Motor-only simulation uses the standard library.
+# QR camera/generator: sudo apt install python3-opencv python3-picamera2 python3-qrcode python3-pil
+# Motor hardware: sudo apt install python3-gpiozero python3-lgpio
 # Optional hardware-independent test runner (install inside a venv).
 pytest>=8,<9

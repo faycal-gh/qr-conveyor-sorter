@@ -37,6 +37,12 @@ def test_simple_direction_trims_whitespace_and_case():
     assert cmd.direction == "left"
 
 
+def test_direction_key_allows_whitespace_around_separator():
+    cmd = parse_qr_payload(" \tDirection \t: Right\n ")
+    assert cmd is not None
+    assert cmd.direction == "right"
+
+
 def test_json_command():
     cmd = parse_qr_payload('{"order_id":"ORD42","direction":"forward"}')
     assert cmd is not None

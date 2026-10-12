@@ -51,10 +51,9 @@ def parse_qr_payload(payload: str) -> SortCommand | None:
         )
 
     # Simple format: direction:left
-    prefix = "direction:"
-    lowered = raw.lower()
-    if lowered.startswith(prefix):
-        direction = lowered[len(prefix):].strip()
+    key, separator, direction = raw.lower().partition(":")
+    if separator and key.strip() == "direction":
+        direction = direction.strip()
         if direction in VALID_DIRECTIONS:
             return SortCommand(direction=direction, raw_payload=raw)
 

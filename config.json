@@ -1,5 +1,14 @@
 {
   "simulation": true,
+  "camera": {
+    "backend": "picamera2",
+    "index": 0,
+    "width": 1280,
+    "height": 720
+  },
+  "qr": {
+    "clear_frames_required": 8
+  },
   "motors": {
     "enabled": {"motor1": true, "motor2": false},
     "pins": {

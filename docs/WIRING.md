@@ -16,13 +16,13 @@ Use the [official Raspberry Pi GPIO reference](https://www.raspberrypi.com/docum
 | Motor 2 DIR interface | 25 | 22 |
 | Pi-side ground, if required by interface | GND | 6 (one possible GND pin) |
 
-Motor 2 is disabled by default. Motor 1 testing does not allocate Motor 2 GPIO or require its driver/motor. No ENA pin, camera or physical sensor is used.
+Motor 2 is disabled by default. Motor 1 bench testing does not allocate Motor 2 GPIO or require its driver/motor. The QR scanner uses a camera and requires both motors enabled for hardware movement; simulation previews both without GPIO. No ENA pin or physical presence sensor is used.
 
 ## Power
 
 - Pi 5: separate 27 W USB-C supply.
 - Drivers: separate Weidmuller 24 V / 10 A supply, connected to each driver's documented DC power terminals. Verify each actual driver's input range and power-terminal polarity against its label/manual.
-- **Never connect 24 V, 5 V signal power, or driver motor terminals to a Pi GPIO. GPIO is 3.3 V and is not a motor power output.**
+- **Never connect 12 V, 24 V, 5 V signal power, or driver motor terminals to a Pi GPIO. GPIO is 3.3 V and is not a motor power output.**
 - Protect and fuse driver branches for the wiring and equipment used. Keep mains terminals enclosed and use appropriate earthing for the supply's documented requirements. Have mains work checked by a qualified person if needed.
 - Never connect/disconnect motor coils or change DIP switches while energized. Switch off the motor supply and wait for its documented discharge time first.
 

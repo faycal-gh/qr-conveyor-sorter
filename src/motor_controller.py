@@ -61,7 +61,16 @@ class StepperController:
 
     def run(self, motor, direction, steps=None, speed=None):
         selected = _selected_motors(self.config, motor)
-        if direction not in ("forward", "reverse"):
+        self._run({name: direction for name in selected}, steps, speed)
+
+    def run_two(self, motor1_direction, motor2_direction, steps=None, speed=None):
+        # Simulation previews both commands even while a driver is deliberately disabled.
+        if not self.simulation:
+            _selected_motors(self.config, "both")
+        self._run({"motor1": motor1_direction, "motor2": motor2_direction}, steps, speed)
+
+    def _run(self, directions, steps, speed):
+        if any(direction not in ("forward", "reverse") for direction in directions.values()):
             raise ValueError("direction must be forward or reverse")
         steps = self.config["default_steps"] if steps is None else steps
         _integer("steps", steps, 1, self.config["max_steps"])
@@ -72,7 +81,7 @@ class StepperController:
                 raise ValueError("speed must be finite and positive (pulses/s)")
             low = 1 / speed - high
             _duration("low duration at requested speed", low)
-        for name in selected:
+        for name, direction in directions.items():
             pins = self.config["pins"]
             level = (direction == "forward") ^ self.config["invert_direction"][name]
             print(f"{name}: STEP=GPIO{pins[name + '_step']} DIR=GPIO{pins[name + '_dir']} "
@@ -85,10 +94,10 @@ class StepperController:
             print("[SIMULATION] Complete; no physical motion verified.")
             return
         print("[HARDWARE] Running; Ctrl+C stops pulses.")
-        self._run_pulses(selected, direction, steps, (high, low))
+        self._run_pulses(directions, steps, (high, low))
         print("[HARDWARE] Complete; GPIO released. Holding current may remain.")
 
-    def _run_pulses(self, selected, direction, steps, timing):
+    def _run_pulses(self, directions, steps, timing):
         try:
             from gpiozero import OutputDevice
             from gpiozero.pins.lgpio import LGPIOFactory
@@ -98,7 +107,7 @@ class StepperController:
             factory = LGPIOFactory(chip=self.config["gpiochip"])
             cleanup.callback(factory.close)
             step_outputs = []
-            for name in selected:
+            for name, direction in directions.items():
                 for signal in ("step", "dir"):
                     output = OutputDevice(
                         self.config["pins"][f"{name}_{signal}"], initial_value=False,

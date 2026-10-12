@@ -1,6 +1,6 @@
-# NEMA 17 motor bench test
+# QR camera control and NEMA 17 motor bench test
 
-The primary application now tests TB6600-style **STEP/DIR stepper drivers** from an SSH terminal. It needs no camera, QR scanner, conveyor or sensors. It is not a PWM servo controller. Raspberry Pi 5 / Raspberry Pi OS 64-bit Trixie / Python 3.13 is the target hardware environment; simulation also runs on Windows.
+Scan QR commands with a real CSI or USB camera over SSH using `python3 -m src.qr_motor_test`. The existing motor-only menu still tests TB6600-style **STEP/DIR stepper drivers** without a camera. Raspberry Pi 5 / Raspberry Pi OS 64-bit Trixie / Python 3.13 is the target hardware environment; USB camera simulation also runs on Windows.
 
 Simulation is the default. Motor 1 is enabled; Motor 2 is disabled and need not be connected. Launching the menu does not open GPIO or move a motor.
 
@@ -9,6 +9,8 @@ Simulation is the default. Motor 1 is enabled; Motor 2 is disabled and need not 
 ```bash
 sudo apt update
 sudo apt install -y git python3-venv python3-gpiozero python3-lgpio
+sudo apt install -y python3-opencv python3-qrcode python3-pil rpicam-apps
+sudo apt install -y --no-install-recommends python3-picamera2
 git clone https://github.com/faycal-gh/qr-conveyor-sorter.git
 cd qr-conveyor-sorter
 python3 -m venv --system-site-packages .venv
@@ -17,7 +19,48 @@ python3 -m pip install -r requirements-pi.txt
 python3 -m pytest -q
 ```
 
-These commands assume the motor-test changes are present in your checkout. See [Pi setup](docs/RASPBERRY_PI_SETUP.md) for an existing checkout and GPIO diagnostics. Runtime simulation uses only Python's standard library; pytest is for tests. The venv exposes the apt-installed GPIO packages, following [GPIO Zero's installation guidance](https://gpiozero.readthedocs.io/en/latest/installing.html).
+See [Pi setup](docs/RASPBERRY_PI_SETUP.md) for an existing checkout and camera/GPIO diagnostics. Motor-only simulation uses Python's standard library; real QR scanning needs OpenCV and the chosen camera library. The venv exposes the apt-installed camera, image and GPIO packages. See [official camera installation](https://www.raspberrypi.com/documentation/computers/camera_software.html#use-libcamera-from-python-with-picamera2) and [GPIO Zero installation](https://gpiozero.readthedocs.io/en/latest/installing.html).
+
+## Live QR scanning over SSH
+
+Check the CSI camera, then start real scanning with simulated motors:
+
+```bash
+rpicam-hello --list-cameras
+python3 -m src.qr_motor_test --simulate
+```
+
+No HDMI display or preview window is required. The real camera and OpenCV decoder run in simulation; motor GPIO is never opened. Show one of these committed images on your phone or print it:
+
+| Image / exact payload | Motor 1 | Motor 2 |
+|---|---|---|
+| [qr_forward.png](test_qr_codes/qr_forward.png): `direction: forward` | FORWARD | FORWARD |
+| [qr_left.png](test_qr_codes/qr_left.png): `direction: left` | FORWARD | REVERSE |
+| [qr_right.png](test_qr_codes/qr_right.png): `direction: right` | REVERSE | FORWARD |
+
+LEFT/RIGHT are differential commands. Case and whitespace are normalized; unsupported payloads do not move motors. Valid JSON payloads from the existing parser remain supported. The terminal prints `[CAMERA] Camera initialized`, decoded payloads, both logical motor directions, execution start/completion, pulse count and nominal speed. Defaults are 200 pulses per motor at 100 pulses/s. Logical directions still respect each motor's configured inversion.
+
+Each valid QR executes once. Remove all QR codes from view for `qr.clear_frames_required` consecutive frames (default 8) before presenting another. Changing to a different QR while locked cannot start movement. Visible unsupported/undecodable QR codes reset the clear-frame count; unsupported codes do not lock an idle scanner. Camera detection can miss a badly lit code, so the lockout is based on detection, not physical presence. Scanning pauses during movement and resumes afterward; no commands overlap or interrupt motion.
+
+Set `camera.backend` in `config.json` to `picamera2` (default CSI) or `opencv` (USB webcam). `camera.index` selects the device, starting at 0; `camera.width` and `camera.height` request the resolution (default 1280×720). USB devices may negotiate a different supported resolution. Use `--config /path/to/config.json` for a separate setup.
+
+Regenerate and verify the three black-on-white PNGs:
+
+```bash
+python3 tools/generate_test_qr.py
+```
+
+The script saves exactly the three named QR images above with a four-module quiet zone and decodes each back to its exact payload, failing if verification fails. Keep the full white border visible when displaying or printing them.
+
+After completing [both drivers' wiring checks](docs/WIRING.md), set both `motors.enabled.motor1` and `motors.enabled.motor2` to `true`, then deliberately enable hardware:
+
+```bash
+python3 -m src.qr_motor_test --hardware --confirm-wiring
+```
+
+Both flags are required. Both drivers must be enabled and the complete GPIO/timing configuration valid before camera startup. A disabled motor or incomplete configuration rejects the entire hardware session; initialization of all four outputs must succeed before any STEP pulses. Both motors receive pulses in the same loop with independent DIR levels. QR simulation previews both motors even when Motor 2 remains disabled for bench testing.
+
+Press **Ctrl+C** to stop scanning or interrupt motion. Errors stop the session with `[ERROR]` and exit status 1; Ctrl+C returns 130. Camera and allocated GPIO resources are released. Stopping STEP does not remove holding current. See [camera troubleshooting](docs/RASPBERRY_PI_SETUP.md#camera-checks-and-troubleshooting) and [electrical safety](docs/WIRING.md).
 
 ## Run through SSH
 
@@ -107,7 +150,7 @@ python -m pytest -q
 
 ## Preserved QR sorter
 
-Camera, parser, QR images and generator remain in the repository. The former entry point and controller are preserved in `src/legacy_sorter.py` and `src/legacy_motor_controller.py`; the former configuration is `config-sorter.json` (simulation true).
+The former entry point and controller are preserved in `src/legacy_sorter.py` and `src/legacy_motor_controller.py`; the former configuration is `config-sorter.json` (simulation true). The new scanner uses `config.json` and the reviewed bench controller.
 
 To run the old camera-based simulation deliberately, install its optional dependencies separately:
 

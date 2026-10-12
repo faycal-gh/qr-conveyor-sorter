@@ -10,7 +10,11 @@ __pycache__/
 !.env.example
 .DS_Store
 Thumbs.db
-test_qr_codes/
+.test-tmp*/
+/test_qr_codes/*.png
+!/test_qr_codes/qr_forward.png
+!/test_qr_codes/qr_left.png
+!/test_qr_codes/qr_right.png
 *.log
 *.tmp
 *.swp
