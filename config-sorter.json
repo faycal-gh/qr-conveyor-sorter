@@ -1,0 +1,35 @@
+{
+  "simulation": true,
+  "camera": {
+    "backend": "opencv",
+    "index": 0,
+    "width": 1280,
+    "height": 720,
+    "show_preview": true
+  },
+  "qr": {
+    "clear_frames_required": 8
+  },
+  "motors": {
+    "step_delay_seconds": 0.001,
+    "movement_steps": {
+      "forward": 500,
+      "left": 500,
+      "right": 500
+    },
+    "pins": {
+      "motor1_step": 18,
+      "motor1_dir": 23,
+      "motor2_step": 24,
+      "motor2_dir": 25
+    },
+    "invert_direction": {
+      "motor1": false,
+      "motor2": false
+    }
+  },
+  "conveyor": {
+    "length_m": 0.8,
+    "speed_mps": 0.141
+  }
+}

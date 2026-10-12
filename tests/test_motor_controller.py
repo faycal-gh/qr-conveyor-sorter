@@ -5,8 +5,8 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-import motor_controller
-from motor_controller import (
+import legacy_motor_controller as motor_controller
+from legacy_motor_controller import (
     RPiTB6600Controller,
     SimulationMotorController,
     _StepperPins,

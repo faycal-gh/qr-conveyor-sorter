@@ -1,6 +1,4 @@
-# Install Picamera2 with apt on Raspberry Pi OS:
-# sudo apt install -y python3-picamera2 python3-opencv python3-gpiozero
-#
-# This file contains only optional pip packages used by this repository.
-qrcode[pil]>=8,<9
+# Motor application uses the standard library in simulation.
+# Hardware: sudo apt install python3-gpiozero python3-lgpio
+# Optional hardware-independent test runner (install inside a venv).
 pytest>=8,<9

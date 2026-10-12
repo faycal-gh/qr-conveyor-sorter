@@ -7,4 +7,4 @@ if (-not (Test-Path ".venv")) {
 & .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 pip install -r requirements-windows.txt
-python src\main.py
+python -m src.motor_test

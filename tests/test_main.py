@@ -4,11 +4,16 @@ from pathlib import Path
 import sys
 import time
 from unittest.mock import patch
+from types import SimpleNamespace
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-import main as sorter_main
+# The regression exercises QR locking; camera decoding is an external boundary.
+with patch.dict(sys.modules, {"cv2": SimpleNamespace(
+    QRCodeDetector=None, cvtColor=None, destroyAllWindows=None, COLOR_BGR2GRAY=0,
+)}):
+    import legacy_sorter as sorter_main
 
 
 class _Camera:
