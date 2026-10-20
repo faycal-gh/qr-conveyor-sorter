@@ -1,0 +1,3 @@
+deploy/wifi/*.sh text eol=lf
+deploy/wifi/*.service text eol=lf
+wifi_provisioning/** text eol=lf

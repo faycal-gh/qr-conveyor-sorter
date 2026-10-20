@@ -1,0 +1,30 @@
+[Unit]
+Description=Independent Raspberry Pi Wi-Fi provisioning
+After=NetworkManager.service
+Requires=NetworkManager.service
+StartLimitIntervalSec=300
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=root
+Group=qr-wifi
+WorkingDirectory=/opt/qr-wifi
+ExecStart=/usr/bin/python3 -m wifi_provisioning.daemon
+RuntimeDirectory=qr-wifi
+RuntimeDirectoryMode=0750
+UMask=0077
+Restart=on-failure
+RestartSec=30
+TimeoutStopSec=150
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+ProtectSystem=strict
+ReadWritePaths=/etc/NetworkManager/system-connections /run/qr-wifi
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_NETLINK
+
+[Install]
+WantedBy=multi-user.target

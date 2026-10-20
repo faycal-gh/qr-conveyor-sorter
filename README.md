@@ -165,3 +165,9 @@ python3 -m src.legacy_sorter
 For Windows legacy camera simulation install `opencv-python>=4.10,<5` in the venv. Choose `opencv` or `picamera2` in `config-sorter.json` as appropriate. The archived controller retains the old differential movement mapping and is not the motor bench test. Do not use its unreviewed hardware path for these initial tests; keep its simulation flag true. Restoring sorter hardware needs its own wiring, GPIO-backend and motion review.
 
 No physical Raspberry Pi, driver or motor verification has been performed by this repository change.
+
+## Automatic Wi-Fi provisioning
+
+Optional, independent Raspberry Pi Wi-Fi setup and recovery:
+[deployment commands](docs/WIFI_DEPLOYMENT.md) · [architecture and troubleshooting](docs/WIFI_PROVISIONING.md).
+Installation does not start or enable the service; activation is explicit.

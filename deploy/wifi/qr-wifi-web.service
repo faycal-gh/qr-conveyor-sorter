@@ -1,0 +1,23 @@
+[Unit]
+Description=Unprivileged Wi-Fi setup portal
+After=qr-wifi.service
+PartOf=qr-wifi.service
+StartLimitIntervalSec=300
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=qr-wifi
+Group=qr-wifi
+WorkingDirectory=/opt/qr-wifi
+ExecStart=/usr/bin/python3 -m wifi_provisioning.web
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+RestrictAddressFamilies=AF_UNIX AF_INET
+UMask=0077
