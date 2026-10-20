@@ -1,6 +1,6 @@
 # Motor test wiring and electrical safety
 
-Hardware mode is intentionally opt-in: `--hardware --confirm-wiring`. This flag records your confirmation; software cannot inspect your wiring. Configure everything with driver power off before the first test.
+Hardware mode is intentionally opt-in. The bench tester/direct scanner require `--hardware --confirm-wiring` each time. The one-command QR launcher instead requires `./run_qr.sh --enable-hardware` and an explicit phrase confirming both motors, then persists that consent for the checked motor settings. Revoke with `./run_qr.sh --revoke-hardware`. Software cannot inspect wiring. Configure everything with driver power off before the first test.
 
 ## GPIO assignments
 
@@ -17,6 +17,14 @@ Use the [official Raspberry Pi GPIO reference](https://www.raspberrypi.com/docum
 | Pi-side ground, if required by interface | GND | 6 (one possible GND pin) |
 
 Motor 2 is disabled by default. Motor 1 bench testing does not allocate Motor 2 GPIO or require its driver/motor. The QR scanner uses a camera and requires both motors enabled for hardware movement; simulation previews both without GPIO. No ENA pin or physical presence sensor is used.
+
+## Installed ULN2803 signal interface
+
+The project uses a ULN2803 between the Pi GPIO outputs and the two STEP/DIR microstep drivers. Its open-collector outputs sink signal current and invert the output voltage relative to the Pi-side input. The TB6600-style drivers, not the ULN2803, supply the motor winding currents from the external 24 V supply. Do not connect motor windings directly to this signal-interface module.
+
+Motor 1 has been tested by the operator with the existing GPIO18/GPIO23 configuration. This change preserves it: `pulse_active_high=true`, 5 ms active/inactive pulse timing and the existing direction inversion defaults. A low ULN2803 collector can activate a driver's optocoupler in an appropriate common-anode interface, so its voltage inversion is not a reason to blindly flip GPIO pulse polarity. Check the actual signal path and driver input requirements before changing anything.
+
+Motor 2 retains GPIO24/GPIO25, with its own ULN2803 channels and separate microstep driver. The repository does not establish module channel numbers, exact wiring, current DIP settings or physical rotation direction. Verify those independently before confirming hardware. Use `./run_qr.sh --invert-motor1` or `--invert-motor2` to reverse a logical mapping without rewiring; this invalidates launcher consent until you check and confirm the new motor settings.
 
 ## Power
 

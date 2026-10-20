@@ -8,7 +8,6 @@ from .config_loader import load_config
 from .motor_controller import build_motor_controller
 from .qr_parser import parse_qr_payload
 
-
 MOTOR_DIRECTIONS = {
     "forward": ("forward", "forward"),
     "left": ("forward", "reverse"),
@@ -34,7 +33,9 @@ def scan(camera, motors, clear_frames_required):
             "use a venv with --system-site-packages (Windows: pip install opencv-python)."
         ) from exc
     detector = cv2.QRCodeDetector()
-    locked = False
+    locked = getattr(camera, 'require_clear', False)
+    if locked:
+        print('[STATE] Remove every QR from the IP camera view before arming.', flush=True)
     empty_frames = 0
     last_payload = None
     while True:
@@ -57,6 +58,9 @@ def scan(camera, motors, clear_frames_required):
             continue
         if locked:
             continue
+        check_health = getattr(camera, 'check_health', None)
+        if check_health is not None:
+            check_health()
         directions = MOTOR_DIRECTIONS[command.direction]
         print(f"[COMMAND] {command.direction.upper()}\n"
               f"[MOTOR 1] {directions[0].upper()}\n[MOTOR 2] {directions[1].upper()}", flush=True)
@@ -95,7 +99,7 @@ def main(argv=None):
     except KeyboardInterrupt:
         print("\n[STOP] Interrupted; camera closed and GPIO released. Holding current may remain.", flush=True)
         return 130
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - terminate the CLI on camera/GPIO/decoder errors
         print(f"[ERROR] {exc}", flush=True)
         return 1
 

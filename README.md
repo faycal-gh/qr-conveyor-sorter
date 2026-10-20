@@ -1,36 +1,30 @@
 # QR camera control and NEMA 17 motor bench test
 
-Scan QR commands with a real CSI or USB camera over SSH using `python3 -m src.qr_motor_test`. The existing motor-only menu still tests TB6600-style **STEP/DIR stepper drivers** without a camera. Raspberry Pi 5 / Raspberry Pi OS 64-bit Trixie / Python 3.13 is the target hardware environment; USB camera simulation also runs on Windows.
+Run `./run_qr.sh` over SSH to scan Android IP Webcam video and control both NEMA17 motors through their TB6600-style **STEP/DIR drivers**. The existing controller, CSI/USB camera support and motor-only bench menu remain available. Target: Raspberry Pi 5 / Raspberry Pi OS 64-bit Trixie / Python 3.13.
 
-Simulation is the default. Motor 1 is enabled; Motor 2 is disabled and need not be connected. Launching the menu does not open GPIO or move a motor.
+Simulation is the default. Motor 2 remains disabled until you explicitly confirm both motors' hardware checks. The ULN2803 switches driver input signals; the microstep drivers supply motor winding current. Existing GPIO assignments, Motor 1 polarity and timing are preserved.
 
 ## Install on Raspberry Pi
 
 ```bash
-sudo apt update
-sudo apt install -y git python3-venv python3-gpiozero python3-lgpio
-sudo apt install -y python3-opencv python3-qrcode python3-pil rpicam-apps
-sudo apt install -y --no-install-recommends python3-picamera2
-git clone https://github.com/faycal-gh/qr-conveyor-sorter.git
-cd qr-conveyor-sorter
-python3 -m venv --system-site-packages .venv
-source .venv/bin/activate
-python3 -m pip install -r requirements-pi.txt
-python3 -m pytest -q
+ssh pi@qr-conveyor.local
+cd ~/qr-conveyor-sorter
+git pull --ff-only
+./setup_pi.sh
+./run_qr.sh
 ```
 
-See [Pi setup](docs/RASPBERRY_PI_SETUP.md) for an existing checkout and camera/GPIO diagnostics. Motor-only simulation uses Python's standard library; real QR scanning needs OpenCV and the chosen camera library. The venv exposes the apt-installed camera, image and GPIO packages. See [official camera installation](https://www.raspberrypi.com/documentation/computers/camera_software.html#use-libcamera-from-python-with-picamera2) and [GPIO Zero installation](https://gpiozero.readthedocs.io/en/latest/installing.html).
+Start the IP Webcam server on your Samsung phone first and connect it to the same reachable network as the Pi. Setup prompts for the phone's full HTTP(S) video URL. It installs only missing OS packages and creates/reuses a venv with system site packages; no daily activation command is needed. It does not change Wi-Fi, SSH, hostname or provisioning services. See [Pi setup](docs/RASPBERRY_PI_SETUP.md) for Android setup, optional cameras, tests and diagnostics.
 
 ## Live QR scanning over SSH
 
-Check the CSI camera, then start real scanning with simulated motors:
+Everyday execution uses saved settings. To force real-camera scanning with simulated motors:
 
 ```bash
-rpicam-hello --list-cameras
-python3 -m src.qr_motor_test --simulate
+./run_qr.sh --simulate
 ```
 
-No HDMI display or preview window is required. The real camera and OpenCV decoder run in simulation; motor GPIO is never opened. Show one of these committed images on your phone or print it:
+No desktop or preview window is required. Simulation never opens GPIO. Show one of these committed images on another display or print it; the Samsung phone is the camera:
 
 | Image / exact payload | Motor 1 | Motor 2 |
 |---|---|---|
@@ -40,25 +34,40 @@ No HDMI display or preview window is required. The real camera and OpenCV decode
 
 LEFT/RIGHT are differential commands. Case and whitespace are normalized; unsupported payloads do not move motors. Valid JSON payloads from the existing parser remain supported. The terminal prints `[CAMERA] Camera initialized`, decoded payloads, both logical motor directions, execution start/completion, pulse count and nominal speed. Defaults are 200 pulses per motor at 100 pulses/s. Logical directions still respect each motor's configured inversion.
 
-Each valid QR executes once. Remove all QR codes from view for `qr.clear_frames_required` consecutive frames (default 8) before presenting another. Changing to a different QR while locked cannot start movement. Visible unsupported/undecodable QR codes reset the clear-frame count; unsupported codes do not lock an idle scanner. Camera detection can miss a badly lit code, so the lockout is based on detection, not physical presence. Scanning pauses during movement and resumes afterward; no commands overlap or interrupt motion.
+Each valid QR executes once. Remove every QR for `qr.clear_frames_required` consecutive frames (default 8) to rearm. IP-camera sessions also require this removal at startup, including after a manual restart. Changing to a different QR while locked cannot move motors. Visible invalid or undecodable codes reset the clear-frame count. Detection can miss a badly lit code, so the gate is based on detection, not physical presence. Decoding pauses during movement; background IP capture keeps draining and retains only its newest frame. Commands cannot overlap.
 
-Set `camera.backend` in `config.json` to `picamera2` (default CSI) or `opencv` (USB webcam). `camera.index` selects the device, starting at 0; `camera.width` and `camera.height` request the resolution (default 1280×720). USB devices may negotiate a different supported resolution. Use `--config /path/to/config.json` for a separate setup.
+Local settings are stored in ignored `config.local.json`, copied initially from the existing motor configuration. Change the camera URL interactively with `./run_qr.sh --configure`, or use `./run_qr.sh --camera-url 'http://PHONE_HOST:8080/video'` (replace PHONE_HOST). View settings with `./run_qr.sh --show-config`. CSI and USB remain supported; see the [camera guide](docs/RASPBERRY_PI_SETUP.md#camera-checks-and-troubleshooting).
+
+Camera loss, decode failure or missing fresh frames stops the session with an error; it never automatically reconnects or starts a new movement. An already-running finite motor command can finish before the scanner observes camera loss. Restore the phone/network, run `./run_qr.sh` again, and remove all QRs before presenting a new command. The Pi/phone must rejoin normal Wi-Fi if provisioning recovery has activated the setup hotspot.
 
 Regenerate and verify the three black-on-white PNGs:
 
 ```bash
-python3 tools/generate_test_qr.py
+sudo apt install -y python3-qrcode python3-pil
+.venv/bin/python tools/generate_test_qr.py
 ```
 
 The script saves exactly the three named QR images above with a four-module quiet zone and decodes each back to its exact payload, failing if verification fails. Keep the full white border visible when displaying or printing them.
 
-After completing [both drivers' wiring checks](docs/WIRING.md), set both `motors.enabled.motor1` and `motors.enabled.motor2` to `true`, then deliberately enable hardware:
+After completing [both drivers' wiring checks](docs/WIRING.md), explicitly enable hardware once:
 
 ```bash
-python3 -m src.qr_motor_test --hardware --confirm-wiring
+./run_qr.sh --enable-hardware
+./run_qr.sh
 ```
 
-Both flags are required. Both drivers must be enabled and the complete GPIO/timing configuration valid before camera startup. A disabled motor or incomplete configuration rejects the entire hardware session; initialization of all four outputs must succeed before any STEP pulses. Both motors receive pulses in the same loop with independent DIR levels. QR simulation previews both motors even when Motor 2 remains disabled for bench testing.
+Type the requested phrase only after checking **both** motors, drivers, ULN2803, supply and mechanism. This saves acknowledgment and enables Motor 2 locally; subsequent launches need no repeated prompt. Confirmation is bound to the complete motor configuration: changed motor settings require confirmation again. `./run_qr.sh --revoke-hardware` clears it, disables Motor 2 and saves simulation. All four GPIO outputs must initialize before any STEP pulses. Both motors pulse in the same coordinated loop with independent DIR levels. The original `python3 -m src.qr_motor_test --hardware --confirm-wiring` interface retains its per-invocation checks.
+
+To save a different pulse count, nominal rate or direction inversion (configuration only; no motion):
+
+```bash
+./run_qr.sh --steps 100 --speed 50
+./run_qr.sh --invert-motor2
+# Undo a direction inversion:
+./run_qr.sh --no-invert-motor2
+```
+
+These motor changes select simulation until hardware is confirmed again. The active pulse width stays unchanged when setting speed. Do not run the bench tester or another GPIO application alongside the scanner; the shell launcher also prevents duplicate launcher sessions.
 
 Press **Ctrl+C** to stop scanning or interrupt motion. Errors stop the session with `[ERROR]` and exit status 1; Ctrl+C returns 130. Camera and allocated GPIO resources are released. Stopping STEP does not remove holding current. See [camera troubleshooting](docs/RASPBERRY_PI_SETUP.md#camera-checks-and-troubleshooting) and [electrical safety](docs/WIRING.md).
 
@@ -108,7 +117,7 @@ Both motors receive interleaved pulses in the same loop; this is a bench test, n
 
 ## Configuration
 
-Edit `config.json`, or use `--config /path/to/config.json`. The old sorter settings are preserved separately in `config-sorter.json`.
+The bench tester and direct scanner use `config.json` or `--config /path/to/config.json`; the one-command launcher uses ignored `config.local.json`. Edit the local file for advanced settings (such as GPIO chip or camera backend), then view it with `./run_qr.sh --show-config`. Any motor edit invalidates launcher hardware confirmation. Do not store device-specific addresses or credentials in tracked configuration files. The old sorter settings remain in `config-sorter.json`.
 
 | Field under `motors` | Default / purpose |
 |---|---|
@@ -143,6 +152,8 @@ py -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements-windows.txt
 python -m src.motor_test
+python -m src.qr_launcher --configure
+python -m src.qr_launcher --simulate
 python -m pytest -q
 ```
 

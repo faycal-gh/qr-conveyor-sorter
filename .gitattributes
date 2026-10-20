@@ -1,3 +1,5 @@
 deploy/wifi/*.sh text eol=lf
 deploy/wifi/*.service text eol=lf
 wifi_provisioning/** text eol=lf
+/run_qr.sh text eol=lf
+/setup_pi.sh text eol=lf

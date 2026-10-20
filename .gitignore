@@ -19,3 +19,5 @@ Thumbs.db
 *.tmp
 *.swp
 *.swo
+/config.local.json
+/.qr-scanner.lock

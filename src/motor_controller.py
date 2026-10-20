@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from contextlib import ExitStack
 import math
+import threading
 import time
+from contextlib import ExitStack
 
 
 def _integer(name, number, minimum, maximum):
@@ -58,6 +59,7 @@ class StepperController:
     def __init__(self, config):
         self.config = config["motors"]
         self.simulation = config["simulation"]
+        self._command_lock = threading.Lock()
 
     def run(self, motor, direction, steps=None, speed=None):
         selected = _selected_motors(self.config, motor)
@@ -70,6 +72,14 @@ class StepperController:
         self._run({"motor1": motor1_direction, "motor2": motor2_direction}, steps, speed)
 
     def _run(self, directions, steps, speed):
+        if not self._command_lock.acquire(blocking=False):
+            raise RuntimeError('A motor command is already running')
+        try:
+            self._execute(directions, steps, speed)
+        finally:
+            self._command_lock.release()
+
+    def _execute(self, directions, steps, speed):
         if any(direction not in ("forward", "reverse") for direction in directions.values()):
             raise ValueError("direction must be forward or reverse")
         steps = self.config["default_steps"] if steps is None else steps

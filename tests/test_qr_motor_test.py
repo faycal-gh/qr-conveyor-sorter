@@ -4,9 +4,12 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from test_motor_test import config as config  # noqa: PLC0414 - pytest fixture re-export
+from test_motor_test import controller
+from test_motor_test import gpio as gpio  # noqa: PLC0414 - pytest fixture re-export
 
-from test_motor_test import config, gpio, controller
-from src import camera as camera_module, motor_controller
+from src import camera as camera_module
+from src import motor_controller
 
 
 @pytest.mark.parametrize("directions,levels", [
@@ -265,6 +268,7 @@ def test_picamera_frame_timeout_or_success_closes_camera(monkeypatch, failure):
 
 def test_generated_and_committed_qr_images_decode_exact_payloads(tmp_path):
     import cv2
+
     from tools.generate_test_qr import generate
     generate(tmp_path)
     expected = {f"qr_{direction}.png": f"direction: {direction}"
@@ -275,3 +279,36 @@ def test_generated_and_committed_qr_images_decode_exact_payloads(tmp_path):
             frame = cv2.imread(str(folder / filename))
             assert frame is not None
             assert cv2.QRCodeDetector().detectAndDecode(frame)[0] == payload
+
+
+def test_overlapping_motor_command_is_rejected_without_extra_pulses(config, gpio, monkeypatch):
+    import threading
+    config['motors']['enabled']['motor2'] = True
+    motors = controller(config, hardware=True)
+    started = threading.Event()
+    release = threading.Event()
+    errors = []
+    def sleep(seconds):
+        if threading.current_thread() is worker and seconds == 0.005:
+            started.set()
+            assert release.wait(3)
+    def move():
+        try:
+            motors.run_two('forward', 'reverse', steps=1)
+        except BaseException as exc:  # noqa: BLE001 - report every worker failure in the test thread
+            errors.append(exc)
+    worker = threading.Thread(target=move)
+    monkeypatch.setattr(motor_controller.time, 'sleep', sleep)
+    worker.start()
+    try:
+        assert started.wait(2)
+        before = len(gpio[1])
+        with pytest.raises(RuntimeError, match='already'):
+            motors.run_two('reverse', 'forward', steps=1)
+        assert len(gpio[1]) == before
+    finally:
+        release.set()
+        worker.join(timeout=3)
+    assert not errors
+    motors.run_two('forward', 'forward', steps=1)
+    assert all(device.closed for device in gpio[1])

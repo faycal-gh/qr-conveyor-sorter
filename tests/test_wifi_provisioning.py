@@ -347,7 +347,6 @@ def test_scan_failure_restores_setup_and_allows_next_attempt():
 
 def test_http_boundary_serves_status_and_blocks_cross_origin_actions():
     import http.client
-    import json
     import threading
     from http.server import HTTPServer
 
@@ -366,7 +365,8 @@ def test_http_boundary_serves_status_and_blocks_cross_origin_actions():
         connection.request(
             "POST",
             "/api/action",
-            body=json.dumps({"action": "rescan"}),
+            # Rejection happens at headers; unread body bytes can cause a Windows TCP reset.
+            body=None,
             headers={"Host": "192.168.4.1:8080", "Origin": "http://evil.test"},
         )
         response = connection.getresponse()
