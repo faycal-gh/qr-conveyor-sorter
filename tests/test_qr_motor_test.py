@@ -91,7 +91,9 @@ def run_scanner(config, tmp_path, args=()):
     return main(["--config", str(path), *args])
 
 
-def test_real_decoding_lockout_and_consecutive_clear_frames(config, gpio, camera_feed, tmp_path, capsys):
+@pytest.mark.parametrize("inversions", [(False, False), (False, True), (True, False), (True, True)])
+def test_real_decoding_lockout_and_consecutive_clear_frames(config, gpio, camera_feed, tmp_path, capsys, inversions):
+    config["motors"]["invert_direction"] = dict(zip(("motor1", "motor2"), inversions))
     import numpy as np
     clear = np.full((480, 640, 3), 255, dtype=np.uint8)
     forward = qr_frame("direction: forward")
@@ -105,9 +107,16 @@ def test_real_decoding_lockout_and_consecutive_clear_frames(config, gpio, camera
     assert run_scanner(config, tmp_path, ["--simulate"]) == 130
     output = capsys.readouterr().out
     assert output.count("[EXECUTION] Starting") == 3
-    assert "[COMMAND] FORWARD\n[MOTOR 1] FORWARD\n[MOTOR 2] FORWARD" in output
-    assert "[COMMAND] LEFT\n[MOTOR 1] FORWARD\n[MOTOR 2] REVERSE" in output
-    assert "[COMMAND] RIGHT\n[MOTOR 1] REVERSE\n[MOTOR 2] FORWARD" in output
+    assert "[COMMAND] FORWARD\n[MOTOR 1] FORWARD\n[MOTOR 2] REVERSE" in output
+    assert "[COMMAND] LEFT\n[MOTOR 1] FORWARD\n[MOTOR 2] FORWARD" in output
+    assert "[COMMAND] RIGHT\n[MOTOR 1] REVERSE\n[MOTOR 2] REVERSE" in output
+    direction_lines = [line for line in output.splitlines() if line.startswith(("motor1:", "motor2:"))]
+    # Executed QR order: forward, left, right. Levels include each motor's inversion.
+    expected_forward = (True, False, True, True, False, False)
+    assert len(direction_lines) == 6
+    for index, (line, forward) in enumerate(zip(direction_lines, expected_forward)):
+        level = forward ^ inversions[index % 2]
+        assert f"DIR={'HIGH' if level else 'LOW'} | 200 STEP pulses | 100.00 pulses/s" in line
     assert gpio[0] == []
     assert camera_feed.released
 
@@ -151,9 +160,11 @@ def test_picamera_start_failure_closes_camera(monkeypatch):
 
 
 @pytest.mark.parametrize("direction,levels", [
-    ("forward", (True, True)), ("left", (True, False)), ("right", (False, True)),
+    ("forward", (True, False)), ("left", (True, True)), ("right", (False, False)),
 ])
-def test_hardware_scanner_does_not_acquire_frames_during_movement(config, gpio, camera_feed, tmp_path, monkeypatch, direction, levels):
+@pytest.mark.parametrize("inversions", [(False, False), (False, True), (True, False), (True, True)])
+def test_hardware_scanner_does_not_acquire_frames_during_movement(config, gpio, camera_feed, tmp_path, monkeypatch, direction, levels, inversions):
+    config["motors"]["invert_direction"] = dict(zip(("motor1", "motor2"), inversions))
     config["motors"]["enabled"]["motor2"] = True
     camera_feed.frames = iter([qr_frame(f"direction: {direction}")])
     reads = []
@@ -169,8 +180,9 @@ def test_hardware_scanner_does_not_acquire_frames_during_movement(config, gpio, 
     monkeypatch.setattr(motor_controller.time, "sleep", sleep)
     assert run_scanner(config, tmp_path, ["--hardware", "--confirm-wiring"]) == 130
     assert camera_feed.released
-    assert (23, "value", levels[0]) in gpio[0]
-    assert (25, "value", levels[1]) in gpio[0]
+    for pin, level, inverted in zip((23, 25), levels, inversions):
+        first_direction = next(event for event in gpio[0] if event[:2] == (pin, "value"))
+        assert first_direction == (pin, "value", level ^ inverted)
     assert all(device.closed and not device.value for device in gpio[1])
 
 

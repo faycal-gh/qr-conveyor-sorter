@@ -28,11 +28,11 @@ No desktop or preview window is required. Simulation never opens GPIO. Show one 
 
 | Image / exact payload | Motor 1 | Motor 2 |
 |---|---|---|
-| [qr_forward.png](test_qr_codes/qr_forward.png): `direction: forward` | FORWARD | FORWARD |
-| [qr_left.png](test_qr_codes/qr_left.png): `direction: left` | FORWARD | REVERSE |
-| [qr_right.png](test_qr_codes/qr_right.png): `direction: right` | REVERSE | FORWARD |
+| [qr_forward.png](test_qr_codes/qr_forward.png): `direction: forward` | CCW | CW |
+| [qr_left.png](test_qr_codes/qr_left.png): `direction: left` | CCW | CCW |
+| [qr_right.png](test_qr_codes/qr_right.png): `direction: right` | CW | CW |
 
-LEFT/RIGHT are differential commands. Case and whitespace are normalized; unsupported payloads do not move motors. Valid JSON payloads from the existing parser remain supported. The terminal prints `[CAMERA] Camera initialized`, decoded payloads, both logical motor directions, execution start/completion, pulse count and nominal speed. Defaults are 200 pulses per motor at 100 pulses/s. Logical directions still respect each motor's configured inversion.
+The table describes target shaft rotation viewed from the same reference side, after calibration below. Logical `forward` is the CCW calibration target for each motor; logical `reverse` is CW. LEFT drives both logical forward, RIGHT both reverse, and FORWARD drives Motor 1 forward and Motor 2 reverse. Case and whitespace are normalized; unsupported payloads do not move motors. Valid JSON payloads from the existing parser remain supported. The terminal prints `[CAMERA] Camera initialized`, decoded payloads, both logical motor directions, execution start/completion, pulse count and nominal speed. Defaults are 200 pulses per motor at 100 pulses/s. Logical directions still respect each motor's configured inversion. Saved pulse count and timing in `config.local.json` remain unchanged, including any approximately three-second movement setting.
 
 Each valid QR executes once. Remove every QR for `qr.clear_frames_required` consecutive frames (default 8) to rearm. IP-camera sessions also require this removal at startup, including after a manual restart. Changing to a different QR while locked cannot move motors. Visible invalid or undecodable codes reset the clear-frame count. Detection can miss a badly lit code, so the gate is based on detection, not physical presence. Decoding pauses during movement; background IP capture keeps draining and retains only its newest frame. Commands cannot overlap.
 
@@ -66,6 +66,8 @@ To save a different pulse count, nominal rate or direction inversion (configurat
 # Undo a direction inversion:
 ./run_qr.sh --no-invert-motor2
 ```
+
+Physical polarity cannot be established from this repository: coil wiring, the ULN2803 interface and driver polarity determine shaft rotation. Existing inversion settings are preserved; GPIO HIGH is not assumed to mean CW. To calibrate, view both shafts from the same reference side and present `direction: left` once with the mechanism clear. Both should turn CCW. Stop scanning and toggle only each motor that turns CW using `./run_qr.sh --invert-motor1` or `--no-invert-motor1` (and the corresponding Motor 2 option), choosing the opposite of its current setting shown by `./run_qr.sh --show-config`. Reconfirm with `./run_qr.sh --enable-hardware`, then restart. Verify LEFT = CCW/CCW, RIGHT = CW/CW and FORWARD = CCW/CW. No wiring or speed/duration change is needed; simulation cannot verify physical rotation.
 
 These motor changes select simulation until hardware is confirmed again. The active pulse width stays unchanged when setting speed. Do not run the bench tester or another GPIO application alongside the scanner; the shell launcher also prevents duplicate launcher sessions.
 

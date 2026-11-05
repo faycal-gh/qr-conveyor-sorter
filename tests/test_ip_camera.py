@@ -128,7 +128,7 @@ def test_manual_ip_camera_restart_requires_removal_before_any_movement(monkeypat
                 ),
                 2,
             )
-    assert executed == [("forward", "reverse"), ("forward", "reverse")]
+    assert executed == [("forward", "forward"), ("forward", "forward")]
 
 
 def test_capture_drains_during_movement_and_delivers_only_newest_frame(monkeypatch):

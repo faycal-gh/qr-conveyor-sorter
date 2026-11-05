@@ -80,7 +80,7 @@ For USB, set `camera.backend` to `opencv` in `config.local.json`, check `ls -l /
 | Hardware confirmation invalid | Inspect `./run_qr.sh --show-config`, verify the changed motor settings, then run `./run_qr.sh --enable-hardware` again |
 | Another QR launcher is running | Stop the previous launcher. Do not delete/recreate its lock file while running, or run another GPIO tool concurrently |
 
-Show one QR at a time. Simulation prints both intended motor directions without opening GPIO. The exact differential mapping and committed PNG links are in [live QR scanning](../README.md#live-qr-scanning-over-ssh). Regenerate them with `python3 tools/generate_test_qr.py`; every output is decoded and verified.
+Show one QR at a time. Simulation prints both intended motor directions without opening GPIO. The shaft rotation targets, calibration instructions and committed PNG links are in [live QR scanning](../README.md#live-qr-scanning-over-ssh). Regenerate them with `python3 tools/generate_test_qr.py`; every output is decoded and verified.
 
 After both drivers pass [wiring checks](WIRING.md):
 

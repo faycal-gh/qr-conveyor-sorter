@@ -8,10 +8,11 @@ from .config_loader import load_config
 from .motor_controller import build_motor_controller
 from .qr_parser import parse_qr_payload
 
+# Calibrate logical forward to shaft CCW for each motor using its existing inversion.
 MOTOR_DIRECTIONS = {
-    "forward": ("forward", "forward"),
-    "left": ("forward", "reverse"),
-    "right": ("reverse", "forward"),
+    "forward": ("forward", "reverse"),
+    "left": ("forward", "forward"),
+    "right": ("reverse", "reverse"),
 }
 
 
