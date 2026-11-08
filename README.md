@@ -32,7 +32,7 @@ No desktop or preview window is required. Simulation never opens GPIO. Show one 
 | [qr_left.png](test_qr_codes/qr_left.png): `direction: left` | CCW | CCW |
 | [qr_right.png](test_qr_codes/qr_right.png): `direction: right` | CW | CW |
 
-The table describes target shaft rotation viewed from the same reference side, after calibration below. Logical `forward` is the CCW calibration target for each motor; logical `reverse` is CW. LEFT drives both logical forward, RIGHT both reverse, and FORWARD drives Motor 1 forward and Motor 2 reverse. Case and whitespace are normalized; unsupported payloads do not move motors. Valid JSON payloads from the existing parser remain supported. The terminal prints `[CAMERA] Camera initialized`, decoded payloads, both logical motor directions, execution start/completion, pulse count and nominal speed. Defaults are 200 pulses per motor at 100 pulses/s. Logical directions still respect each motor's configured inversion. Saved pulse count and timing in `config.local.json` remain unchanged, including any approximately three-second movement setting.
+The table describes target shaft rotation viewed from the same reference side, after calibration below. Logical `forward` is the CCW calibration target for each motor; logical `reverse` is CW. LEFT drives both logical forward, RIGHT both reverse, and FORWARD drives Motor 1 forward and Motor 2 reverse. Case and whitespace are normalized; unsupported payloads do not move motors. Valid JSON payloads from the existing parser remain supported. The terminal prints `[CAMERA] Camera initialized`, decoded payloads, both logical motor directions, execution start/completion, pulse count and nominal speed. Defaults are 1000 pulses per motor at 100 pulses/s, giving approximately 10 seconds of movement. Logical directions still respect each motor's configured inversion. Saved pulse count and timing in `config.local.json` override these defaults. For an existing local configuration at the default speed, run `./run_qr.sh --steps 1000` to save approximately 10 seconds of movement; changed motor settings require hardware confirmation again.
 
 Each valid QR executes once. Remove every QR for `qr.clear_frames_required` consecutive frames (default 8) to rearm. IP-camera sessions also require this removal at startup, including after a manual restart. Changing to a different QR while locked cannot move motors. Visible invalid or undecodable codes reset the clear-frame count. Detection can miss a badly lit code, so the gate is based on detection, not physical presence. Decoding pauses during movement; background IP capture keeps draining and retains only its newest frame. Commands cannot overlap.
 
@@ -128,7 +128,7 @@ The bench tester and direct scanner use `config.json` or `--config /path/to/conf
 | `invert_direction` | False for each motor; forward normally means GPIO DIR high |
 | `pulse_active_high` | True: STEP idle low, pulses high; false: idle high, pulses low; match the verified interface |
 | `default_motor` | `"1"`; used by a one-shot command without `--motor` |
-| `default_steps` | 200 STEP pulses per menu movement |
+| `default_steps` | 1000 STEP pulses per menu movement |
 | `max_steps` | 10000 per command, per motor; configurable from 1 to 1000000 |
 | `pulse_high_seconds` | 0.005 |
 | `pulse_low_seconds` | 0.005; nominal rate = 1 / (high + low) = 100 pulses/s |

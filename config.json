@@ -20,7 +20,7 @@
     "invert_direction": {"motor1": false, "motor2": false},
     "pulse_active_high": true,
     "default_motor": "1",
-    "default_steps": 200,
+    "default_steps": 1000,
     "max_steps": 10000,
     "pulse_high_seconds": 0.005,
     "pulse_low_seconds": 0.005,
